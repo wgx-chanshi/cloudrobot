@@ -7,6 +7,7 @@ import time
 import threading
 import pybullet_data
 from sensor_msgs.msg import JointState
+from sensor_msgs.msg import Imu
 
 
 # from pybullet_debuger import pybulletDebug
@@ -14,7 +15,8 @@ from sensor_msgs.msg import JointState
 # from gaitPlanner import trotGait
 
 def init_simulation():
-    global boxId, motor_id_list, compensateReal
+    global boxId, motor_id_list, compensateReal, get_last_euler
+    get_last_euler = [0.0, 0.0, 0.0]
     physicsClient = p.connect(p.GUI)  # or p.DIRECT for non-graphical version
     p.setAdditionalSearchPath(pybullet_data.getDataPath())  # optionally
     motor_id_list = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]
@@ -58,21 +60,37 @@ def init_simulation():
 
 def callback_state(msg):
     get_position = []
+    get_position0 = []
+    get_orientation = []
+    get_euler = []
+    get_velocity = [0.0, 0.0 , 0.0]
+    global get_last_euler
+    Kp = 2
+    Kd = 2
     compensate = [1, -1, -1, 1, -1, -1, 1, -1, -1, 1, -1, -1]
+    # pose_orn = p.getBasePositionAndOrientation(boxId)
+    # for i in range(4):
+    #     get_orientation.append(pose_orn[1][i])
+    # get_euler = p.getEulerFromQuaternion(get_orientation)
+    #
+    # for i in range(3):
+    #     get_velocity.append((get_euler[i] - get_last_euler[i]) / 0.005)
+    #
+    # print(get_velocity)
+    # print(get_euler, get_last_euler)
+
+    # get_last_euler = get_euler
+
     for i in range(12):
+        # get_position0.append(msg.position[i] + Kp * get_euler[0] + Kd * get_euler[1])
+
         get_position.append(msg.position[i] * compensate[i])
-        # get_position.append(msg.position[i])
+        # get_position.append(msg.position[i] + Kp * get_velocity[0] + Kd * get_velocity[1])
     p.setJointMotorControlArray(boxId,
                                 jointIndices=motor_id_list,
                                 controlMode=p.POSITION_CONTROL,
                                 targetPositions=get_position,
                                 )
-    # joint_state = p.getJointStates(boxId, motor_id_list)
-    # position = [joint_state[0][0], joint_state[1][0], joint_state[2][0],
-    #             joint_state[3][0], joint_state[4][0], joint_state[5][0],
-    #             joint_state[6][0], joint_state[7][0], joint_state[8][0],
-    #             joint_state[9][0], joint_state[10][0], joint_state[11][0]]
-    # print(position)
 
 
 def thread_job():
@@ -80,17 +98,31 @@ def thread_job():
 
 
 def talker():
+    get_orientation = []
+    get_euler = []
     pub1 = rospy.Publisher('/get_js', JointState, queue_size=10)
+    pub2 = rospy.Publisher('/imu_body', Imu, queue_size=10)
+    imu_msg = Imu()
     freq = 200
     rate = rospy.Rate(freq)  # hz
     while not rospy.is_shutdown():
         # p.stepSimulation()
-        joint_state = p.getJointState(quadruped, motor_id_list)
-        position = [joint_state[0][0], joint_state[1][0], joint_state[2][0],
-                    joint_state[3][0], joint_state[4][0], joint_state[5][0],
-                    joint_state[6][0], joint_state[7][0], joint_state[8][0],
-                    joint_state[9][0], joint_state[10][0], joint_state[11][0]]
-        print(position)
+        get_orientation = []
+        pose_orn = p.getBasePositionAndOrientation(boxId)
+        for i in range(4):
+            get_orientation.append(pose_orn[1][i])
+        get_euler = p.getEulerFromQuaternion(get_orientation)
+        imu_msg.orientation.x = get_euler[0]
+        imu_msg.orientation.y = get_euler[1]
+        imu_msg.orientation.z = get_euler[2]
+        imu_msg.orientation.w = 1.0
+        # joint_state = p.getJointState(boxId, motor_id_list)
+        # position = [joint_state[0][0], joint_state[1][0], joint_state[2][0],
+        #             joint_state[3][0], joint_state[4][0], joint_state[5][0],
+        #             joint_state[6][0], joint_state[7][0], joint_state[8][0],
+        #             joint_state[9][0], joint_state[10][0], joint_state[11][0]]
+        # print(position)
+        pub2.publish(imu_msg)
         p.setRealTimeSimulation(1)
         rate.sleep()
 
@@ -99,7 +131,7 @@ if __name__ == '__main__':
     init_simulation()
     rospy.init_node('listener', anonymous=True)
     rospy.Subscriber("set_js", JointState, callback_state)
-    # add_thread = threading.Thread(target=thread_job)
-    # add_thread.start()
-    # talker()
-    rospy.spin()
+    add_thread = threading.Thread(target=thread_job)
+    add_thread.start()
+    talker()
+    # rospy.spin()
