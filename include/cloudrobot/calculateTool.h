@@ -5,12 +5,15 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <Eigen/Core>
+#include <iostream>
 #include <vector>
 
 using namespace Eigen;
 
 class CalculateTool{
   public:
+    CalculateTool();
+    ~CalculateTool();
     int factorial(int n);
     double power(double a, int k);
     double getCurrentTime();
@@ -20,6 +23,11 @@ class CalculateTool{
     void RTmatrix(std::vector<double> orientation, std::vector<double> position, Matrix4d &translateMatrix);
     void transform(std::vector<double> coord, std::vector<double> orientation, 
                    std::vector<double> position, std::vector<double> &transformVector);
+    double PIDController(double Kp, double Ki, double Kd, double Setpoint, double Input);
+
+    bool firstOrnot;
+    double lastTime;
+    double lastErr;
 };
 
 #endif

@@ -39,8 +39,7 @@ double GaitPlanner::bezier(double t, int k, double point){
   a = calculateTool->power(t, k);
   b = calculateTool->power(1-t, N-k);
   result = point * binomialFactor(N, k) * a * b;
-
-  // std::cout << "value is: " << point << ", " << binomialFactor(N, k) << ", " << a << ", " << b << std::endl;
+  
   return result;
 }
 
@@ -86,13 +85,11 @@ void GaitPlanner::calculateBezier_swing(double phi_sw, double Velocity, double a
     swingX = swingX + bezier(phi_sw, i, X[i]);
     swingY = swingY + bezier(phi_sw, i, Y[i]);
     swingZ = swingZ + bezier(phi_sw, i, Z[i]);
-    // std::cout << "value is: " << bezier(phi_sw, i, X[i]) << ", " << bezier(phi_sw, i, Y[i]) << ", " << bezier(phi_sw, i, Z[i]) << ", " << phi_sw << std::endl;
   }
 
   swing[0] = swingX;
   swing[1] = swingY;
   swing[2] = swingZ;
-  // std::cout << "value is: " << swing[0] << ", " << swing[1] << ", " << swing[2] << std::endl;
 }
 
 void GaitPlanner::stepTrajectory(double phi_step, double Velocity, double angle, double Wrot, 
@@ -148,9 +145,6 @@ void GaitPlanner::stepTrajectory(double phi_step, double Velocity, double angle,
   coord[0] = step_long[0] + step_rot[0];
   coord[1] = step_long[1] + step_rot[1];
   coord[2] = step_long[2] + step_rot[2];
-
-  // std::cout << "value is: " << step_long[0] << ", " << step_rot[0] << ", " << step_long[1] << ", " << step_rot[1] << std::endl;
-
 }
 
 void GaitPlanner::loop(double Velocity, double angle, double Wrot, double T, 

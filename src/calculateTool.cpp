@@ -3,6 +3,17 @@
 */
 #include "calculateTool.h"
 
+CalculateTool::CalculateTool(){
+  firstOrnot = true;
+  lastTime = 0.0;
+  lastErr = 0.0;
+}
+
+CalculateTool::~CalculateTool(){
+
+}
+
+
 int CalculateTool::factorial(int n){
   unsigned long long factor = 1;
   for(int i = 1; i <= n; i++){
@@ -121,5 +132,37 @@ void CalculateTool::transform(std::vector<double> coord, std::vector<double> ori
   transformVector[2] = transform(2,0);
 }
 
+double CalculateTool::PIDController(double Kp, double Ki, double Kd, double Setpoint, double Input){
+  double currentTime;
+  double timeChange;
+  double error, errSum, dErr;
+  double Output;
+
+  if(firstOrnot){
+    lastTime = getCurrentTime();
+    firstOrnot = false;
+
+  }
+  currentTime = getCurrentTime();
+  // timeChange = currentTime - lastTime;
+  // std::cout << "time is " << currentTime << ", " << lastTime << ", " << timeChange << std::endl;
+  timeChange = 0.005;
+  error = Setpoint - Input;
+  errSum += (error * timeChange);
+
+  if(timeChange < 0.00001){
+    dErr = 0.0;
+  }else{
+    dErr = (error - lastErr) / timeChange;
+  }
+  
+
+  Output = Kp * error + Ki * errSum + Kd * dErr;
+
+  lastErr = error;
+  lastTime = currentTime;
+
+  return Output;
+}
 
 

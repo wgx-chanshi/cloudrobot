@@ -8,6 +8,7 @@ import threading
 import pybullet_data
 from sensor_msgs.msg import JointState
 from sensor_msgs.msg import Imu
+import matplotlib.pyplot as plt
 
 
 # from pybullet_debuger import pybulletDebug
@@ -56,6 +57,8 @@ def init_simulation():
         force = 500
         p.setJointMotorControl2(boxId, motor_id_list[j], p.POSITION_CONTROL, init_new_pos[j])
     p.setRealTimeSimulation(1)
+
+
 
 
 def callback_state(msg):

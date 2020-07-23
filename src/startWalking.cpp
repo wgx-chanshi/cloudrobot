@@ -4,6 +4,8 @@
 #include <string>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/JointState.h>
+#include <sensor_msgs/Imu.h>
+#include "imu_publish/imudata.h"
 #include "gaitPlanner.h"
 #include "kinematic_solver.h"
 
@@ -23,6 +25,8 @@ double robotZ = 0.0;
 double robotRoll = 0.0;
 double robotPitch = 0.0;
 double robotYaw = 0.0;
+double offset_X = 0.0;
+double offset_Y = 0.0;
 double compensateReal[12] = {-1, -1, -1, 1, -1, -1, -1, 1, 1, 1, 1, 1};
 // double compensateSim[3] = {1, -1, -1};
 std::string joint_name[12] = {"abduct_fl", "thigh_fl", "knee_fl", "abduct_hl", "thigh_hl", "knee_hl",
@@ -30,12 +34,14 @@ std::string joint_name[12] = {"abduct_fl", "thigh_fl", "knee_fl", "abduct_hl", "
 std::vector<double> pos;
 std::vector<double> orn;
 std::vector<double> offset;
+std::vector<double> imu;
 std::vector<std::vector<double>> bodytoFeet0; //initial foot position
 std::vector<std::vector<double>> jointAngles;
 std::vector<std::vector<double>> _bodytoFeet;
 
 GaitPlanner *gaitplanner;
 KinematicModel *kinematicmodel;
+// CalculateTool *calculateTool;
 
 
 void QuadrupedCtrl(){
@@ -84,25 +90,33 @@ void PoseCmdCallBack(const geometry_msgs::Twist& msg){
   
 }
 
+void ImuCmdCallBack(const sensor_msgs::Imu& msg){
+  imu[0] = msg.orientation.x;
+  imu[1] = msg.orientation.y;
+  imu[2] = msg.orientation.z;
+  // std::cout << "imu value is : " << imu[0] << ", " << imu[1] << ", " << imu[2] << std::endl;
+
+  offset_X = calculateTool->PIDController(-0.3, 0.0, 0.0001, 0.0, imu[1]);
+  offset_Y = calculateTool->PIDController(0.3, 0.0, 0.0001, 0.0, imu[0]);
+  std::cout << "imu value is : " << offset_X << ", " << offset_Y << std::endl;
+}
+
+// void ImuCmdCallBack(const imu_publish::imudata& msg){
+//   imu[0] = msg.eul.at(0);
+//   imu[1] = msg.eul.at(1);
+//   imu[2] = msg.eul.at(2);
+//   std::cout << "imu value is : " << imu[0] << ", " << imu[1] << ", " << imu[2] << std::endl;
+
+//   offset_X = calculateTool->PIDController(-0.3, 0.0, 0.0001, 0.0, imu[1]);
+//   offset_Y = calculateTool->PIDController(0.3, 0.0, 0.0001, 0.0, imu[0]);
+//   // std::cout << "imu value is : " << offset_X << ", " << offset_Y << std::endl;
+// }
+
+
 int main(int argc, char **argv) {
-
-  // std::vector<std::vector<double>> feet;
-
-  // feet.clear();
-  // feet.resize(4);
-  // feet[0].resize(3);
-  // feet[1].resize(3);
-  // feet[2].resize(3);
-  // feet[3].resize(3);
-
-  // for(int i = 0; i < 4; i++){
-  //   feet[i][0] = 0.19;
-  //   feet[i][1] = 0.1161;
-  //   feet[i][2] = -0.26;
-  // }
-
   gaitplanner = new GaitPlanner();
   kinematicmodel = new KinematicModel();
+  calculateTool = new CalculateTool();
 
   offset.clear();
   offset.resize(4);
@@ -151,6 +165,12 @@ int main(int argc, char **argv) {
   orn[1] = robotPitch;
   orn[2] = robotYaw;
 
+  imu.clear();
+  imu.resize(3);
+  imu[0] = 0.0;
+  imu[1] = 0.0;
+  imu[2] = 0.0;
+
   ros::init(argc, argv, "quadruped_robot");
   ros::NodeHandle n;
 
@@ -160,16 +180,20 @@ int main(int argc, char **argv) {
   ros::Publisher pub_joint = n.advertise<sensor_msgs::JointState>("set_js", 1000);
   ros::Subscriber sub_vel = n.subscribe("cmd_vel", 1000, velCmdCallBack);
   ros::Subscriber sub_pos = n.subscribe("cmd_pose", 1000, PoseCmdCallBack);
+  // ros::Subscriber sub_imu = n.subscribe("imu_eul", 1000, ImuCmdCallBack);
+  ros::Subscriber sub_imu = n.subscribe("imu_body", 1000, ImuCmdCallBack);
 
   while (ros::ok()){
     joint_state.header.stamp = ros::Time::now();
     joint_state.name.resize(12);
     joint_state.position.resize(12);
-    // std::cout << "gaitLength: " << gaitLength << " , " << "gaitYaw: " << gaitYaw << " , " << "rotSpeed: " << rotSpeed << " , " << "T: " << T << std::endl;
+
     gaitplanner->loop(gaitLength, gaitYaw, rotSpeed, T, offset, bodytoFeet0);
 
+    pos[0] = offset_X;
+    pos[1] = offset_Y;
+    // std::cout << "pos value is " << pos[0] << ", " << pos[1] << std::endl;
     kinematicmodel->inverseKineSolver(orn, pos, gaitplanner->bodytoFeet, jointAngles, _bodytoFeet);
-    // kinematicmodel->inverseKineSolver(orn, pos, feet, jointAngles, _bodytoFeet);
 
     // for(int i = 0; i < 4; i++){
     //   for(int j = 0; j < 3; j++){
@@ -193,7 +217,6 @@ int main(int argc, char **argv) {
       for(int j = 0; j < 3; j++){
         joint_state.name[3 * i + j] = joint_name[3 * i + j];
         joint_state.position[3 * i + j] = jointAngles[i][j];
-        // std::cout << "the angle is :" << jointAngles[i][j] << std::endl;
       }  
     }
 

@@ -59,6 +59,10 @@
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
 
+  <build_depend>imu_publish</build_depend>
+  <build_export_depend>imu_publish</build_export_depend>
+  <exec_depend>imu_publish</exec_depend>
+
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

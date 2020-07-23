@@ -11,6 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  message_generation
+  imu_publish
 )
 
 ## System dependencies are found with CMake's conventions
@@ -103,9 +105,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES cloudrobot
-#  CATKIN_DEPENDS roscpp rospy std_msgs
+  INCLUDE_DIRS include
+  LIBRARIES cloudrobot
+  CATKIN_DEPENDS roscpp rospy std_msgs imu_publish
 #  DEPENDS system_lib
 )
 
@@ -172,7 +174,8 @@ add_dependencies(startWalking ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPOR
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
  catkin_install_python(PROGRAMS
-   scripts/walking_simulation.py
+   scripts/walking_simulation.py 
+   scripts/plotData.py
    DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
  )
 
